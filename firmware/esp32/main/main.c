@@ -24,16 +24,16 @@ static int blectf_gap_event(struct ble_gap_event *event, void *arg);
 static void blectf_advertise(void)
 {
     struct ble_hs_adv_fields  fields;
+    struct ble_hs_adv_fields  rsp_fields;
     struct ble_gap_adv_params adv_params;
     int rc;
 
+    /* ADV PDU: device name + flag 15 in the manufacturer-specific data */
     memset(&fields, 0, sizeof fields);
     fields.flags = BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP;
     fields.name = (uint8_t *)BLECTF_DEVICE_NAME;
     fields.name_len = strlen(BLECTF_DEVICE_NAME);
     fields.name_is_complete = 1;
-
-    /* T2: a flag rides in the manufacturer-specific data */
     fields.mfg_data = blectf_mfg_data();
     fields.mfg_data_len = blectf_mfg_data_len();
 
@@ -43,8 +43,18 @@ static void blectf_advertise(void)
         return;
     }
 
+    /* SCAN RESPONSE PDU: flag 16, only handed out on an active scan */
+    memset(&rsp_fields, 0, sizeof rsp_fields);
+    rsp_fields.mfg_data = blectf_scanrsp_data();
+    rsp_fields.mfg_data_len = blectf_scanrsp_data_len();
+    rc = ble_gap_adv_rsp_set_fields(&rsp_fields);
+    if (rc != 0) {
+        ESP_LOGE(TAG, "adv_rsp_set_fields rc=%d", rc);
+        return;
+    }
+
     memset(&adv_params, 0, sizeof adv_params);
-    adv_params.conn_mode = BLE_GAP_CONN_MODE_UND;
+    adv_params.conn_mode = BLE_GAP_CONN_MODE_UND;   /* connectable, scannable */
     adv_params.disc_mode = BLE_GAP_DISC_MODE_GEN;
 
     rc = ble_gap_adv_start(g_own_addr_type, NULL, BLE_HS_FOREVER,
@@ -124,7 +134,11 @@ void app_main(void)
     ble_hs_cfg.reset_cb = blectf_on_reset;
     ble_hs_cfg.store_status_cb = ble_store_util_status_rr;
 
-    /* SMP: enable bonding + LE Secure Connections for the T3 security flags */
+    /* SMP: enable bonding + LE Secure Connections for the T3 security flags.
+     * NO_INPUT_OUTPUT gives Just Works pairing (flag 21). Passkey / Numeric
+     * Comparison flags will switch this to DISPLAY_ONLY / DISPLAY_YESNO plus a
+     * BLE_GAP_EVENT_PASSKEY_ACTION handler. */
+    ble_hs_cfg.sm_io_cap = BLE_HS_IO_NO_INPUT_OUTPUT;
     ble_hs_cfg.sm_bonding = 1;
     ble_hs_cfg.sm_sc = 1;
     ble_hs_cfg.sm_our_key_dist   = BLE_SM_PAIR_KEY_DIST_ENC | BLE_SM_PAIR_KEY_DIST_ID;

@@ -63,15 +63,29 @@ BLEtterCTF/
     07-adding-flags.md  how to author new flags
 ```
 
+## Documentation
+
+The detailed, didactic docs live in the **[GitHub Wiki](https://github.com/Giorgiofox/BLEtterCTF/wiki)**,
+starting with a full **BLE primer**. The `docs/` and `wiki/` folders in this repo
+hold the same material version-controlled. To publish the wiki, see
+`tools/publish-wiki.sh` (one-time manual step: create the first wiki page in the
+web UI).
+
+## No BLEtterCap required
+
+The entire core game (Tiers 0-3) is solvable with tools you already have:
+`bluetoothctl`, Python `bleak`, or the free nRF Connect phone app. BLEtterCap adds
+an optional packet X-ray; it is never a dependency.
+
 ## Quickstart
 
-1. Flash an ESP32: see [docs/02-flashing.md](docs/02-flashing.md).
+1. Flash an ESP32: see the [Flashing](https://github.com/Giorgiofox/BLEtterCTF/wiki/Flashing-the-ESP32) wiki page (or `docs/02-flashing.md`).
 2. Confirm it advertises as `BLEtterCTF`.
-3. Start capturing flags: see [docs/03-solving-guide.md](docs/03-solving-guide.md).
+3. Start capturing flags: [Solving Without BLEtterCap](https://github.com/Giorgiofox/BLEtterCTF/wiki/Solving-Without-BLEtterCap).
 
 ## Status
 
-Early scaffold. The firmware implements one working example of every mechanic
-class (direct read, descriptor, write-to-unlock, notify, advertising); the full
-catalog in `docs/04-flag-catalog.md` is ported in flag by flag. See
-`docs/07-adding-flags.md`.
+The firmware implements 15 flags across Tiers 0-3 plus a long-read (T6), all
+host-solvable. The remaining catalog flags (BLE5 advertising, privacy, PHY,
+L2CAP) are ported in as the firmware grows and tested on real hardware. Full list
+and status in [Flag Catalog](https://github.com/Giorgiofox/BLEtterCTF/wiki/Flag-Catalog).

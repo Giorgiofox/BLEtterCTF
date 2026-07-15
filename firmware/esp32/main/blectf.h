@@ -6,10 +6,13 @@
 /*
  * BLEtterCTF - shared firmware interface.
  *
- * The target is a single ESP32 (esp32 / esp32-s3 / esp32-c3 / esp32-c6) running
+ * Target: a single ESP32 (esp32 / esp32-s3 / esp32-c3 / esp32-c6) running
  * ESP-IDF + NimBLE. BLE5-capable chips (c3/c6/s3) unlock the advanced tiers
  * (extended/periodic advertising, coded PHY). The classic esp32 is BLE 4.2 and
  * covers the core tiers only.
+ *
+ * Everything here is solvable with standard tools (bluetoothctl, bleak, the
+ * nRF Connect app) - no BLEtterCap required.
  */
 
 #define BLECTF_DEVICE_NAME "BLEtterCTF"
@@ -19,9 +22,11 @@ int  blectf_gatt_init(void);
 void blectf_on_subscribe(uint16_t conn_handle, uint16_t attr_handle, int cur_notify);
 void blectf_notify_score(uint16_t conn_handle);
 
-/* Advertising payload used by T2 flags (flags.c) */
-uint8_t *blectf_mfg_data(void);
+/* Advertising payloads (flags.c) */
+uint8_t *blectf_mfg_data(void);       /* T2 flag 15: manufacturer data in ADV     */
 uint8_t  blectf_mfg_data_len(void);
+uint8_t *blectf_scanrsp_data(void);   /* T2 flag 16: manufacturer data in SCAN RSP */
+uint8_t  blectf_scanrsp_data_len(void);
 
 /* Scoreboard and flag registry (flags.c) */
 int         blectf_flag_count(void);            /* flags currently implemented */
