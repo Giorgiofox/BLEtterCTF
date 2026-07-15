@@ -87,14 +87,21 @@ and encrypted. Two facts were verified:
    protected, not just hidden.
 2. **After pairing, the flag reads out** and submits to reach `15/15`.
 
-**On the bench:** fact (1) was confirmed on both a BlueZ adapter and the WHAD
-ButteRFly - an unpaired read of `0xFF13` is rejected by the peripheral. Fact (2)
-could not be completed on the lab's central hardware: the USB dongle in this host
-is a counterfeit CSR8510 that returns `org.bluez.Error.AuthenticationFailed` for
-LE SMP (both LESC and legacy), and the WHAD ButteRFly central path connected only
-intermittently before its firmware wedged. Pairing is a **central-side**
-capability, so this is a limitation of the test central, not of the BLEtterCTF
-firmware (which correctly enforces the encryption gate).
+**On the bench:** fact (1) was confirmed - an unpaired read of `0xFF13` is
+rejected by the peripheral. Fact (2) could not be completed because **neither
+radio on the test host can act as a pairing-capable central**:
+
+- The USB BlueZ adapter is a counterfeit CSR8510 that returns
+  `org.bluez.Error.AuthenticationFailed` for LE SMP (both LESC and legacy) - it
+  does GATT fine (it solved the other 14 flags) but cannot pair.
+- The WHAD ButteRFly reliably **sniffs** the target (its advertisement was
+  confirmed present in 10/10 attempts) but its WHAD *central* could not initiate
+  a connection in this environment (`PeripheralNotFound` on every attempt).
+
+Pairing is a **central-side** capability, so this is a limitation of the test
+central hardware, not of the BLEtterCTF firmware, which correctly enforces the
+encryption gate. The board itself was verified advertising and healthy at 14/15
+throughout.
 
 To take the score to a clean **15/15**, use a central that can actually pair:
 
