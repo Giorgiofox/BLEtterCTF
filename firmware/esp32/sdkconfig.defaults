@@ -1,0 +1,29 @@
+# BLEtterCTF firmware defaults. `idf.py set-target <chip>` regenerates the full
+# sdkconfig from these; edit here, not in the generated sdkconfig.
+
+# --- Bluetooth: NimBLE host, peripheral + broadcaster ------------------------
+CONFIG_BT_ENABLED=y
+CONFIG_BT_NIMBLE_ENABLED=y
+CONFIG_BT_NIMBLE_ROLE_PERIPHERAL=y
+CONFIG_BT_NIMBLE_ROLE_BROADCASTER=y
+CONFIG_BT_NIMBLE_ROLE_CENTRAL=n
+CONFIG_BT_NIMBLE_ROLE_OBSERVER=n
+
+# --- Security manager: bonding + LE Secure Connections (T3 flags) ------------
+CONFIG_BT_NIMBLE_SECURITY_ENABLE=y
+CONFIG_BT_NIMBLE_SM_LEGACY=y
+CONFIG_BT_NIMBLE_SM_SC=y
+CONFIG_BT_NIMBLE_NVS_PERSIST=y
+
+# --- Partition table ---------------------------------------------------------
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+
+# --- Logging -----------------------------------------------------------------
+CONFIG_LOG_DEFAULT_LEVEL_INFO=y
+
+# BLE5 features (extended/periodic advertising, coded/2M PHY) are only compiled
+# in on BLE5-capable targets (esp32c3/c6/s3/h2). On the classic esp32 they are
+# unavailable and the advanced tiers are skipped. Enable per target as you add
+# those flags, e.g.:
+#   CONFIG_BT_NIMBLE_EXT_ADV=y
