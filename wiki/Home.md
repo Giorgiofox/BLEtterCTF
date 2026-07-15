@@ -29,6 +29,11 @@ primer.
 - **[Tier 3 - Security](Walkthrough-Tier-3-Security)**
 - **[Advanced Tiers (T4-T6)](Advanced-Tiers)** - privacy, PHY, L2CAP; needs a sniffer or nRF dongle.
 
+## Proof it works
+
+- **[Full Walkthrough and Test Report](Full-Walkthrough-and-Test-Report)** - every
+  flag exercised on a real ESP32-C6 without BLEtterCap, with observed results.
+
 ## Reference
 
 - **[Flag Catalog](Flag-Catalog)** - the full challenge list.

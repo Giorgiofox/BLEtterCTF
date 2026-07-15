@@ -230,10 +230,10 @@ async def _adv(client, fid, payload):
 
 async def _encrypted(client):
     try:
-        await client.pair()
+        await asyncio.wait_for(client.pair(), timeout=25)
     except Exception:                              # noqa: BLE001
         pass  # some platforms pair implicitly on the encrypted read
-    flag = await client.read_gatt_char(F21_ENC)
+    flag = await asyncio.wait_for(client.read_gatt_char(F21_ENC), timeout=15)
     record(21, await submit(client, flag), flag.decode(errors="replace"))
 
 

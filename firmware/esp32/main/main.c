@@ -141,7 +141,11 @@ void app_main(void)
      * BLE_GAP_EVENT_PASSKEY_ACTION handler. */
     ble_hs_cfg.sm_io_cap = BLE_HS_IO_NO_INPUT_OUTPUT;
     ble_hs_cfg.sm_bonding = 1;
-    ble_hs_cfg.sm_sc = 1;
+    ble_hs_cfg.sm_sc = 1;   /* LE Secure Connections (LESC). SM_LEGACY is also
+                             * enabled in sdkconfig, so pre-4.2 centrals fall back
+                             * to legacy pairing. A phone (nRF Connect) or any
+                             * genuine BT4.2+ adapter pairs flag 21 in one tap;
+                             * counterfeit CSR8510 dongles fail LE SMP entirely. */
     ble_hs_cfg.sm_our_key_dist   = BLE_SM_PAIR_KEY_DIST_ENC | BLE_SM_PAIR_KEY_DIST_ID;
     ble_hs_cfg.sm_their_key_dist = BLE_SM_PAIR_KEY_DIST_ENC | BLE_SM_PAIR_KEY_DIST_ID;
 
