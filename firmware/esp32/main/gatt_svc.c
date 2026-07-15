@@ -191,6 +191,9 @@ static int gatt_access(uint16_t conn_handle, uint16_t attr_handle,
             return append_str(ctxt, buf);
         case UUID_F1_READ:
             return append_str(ctxt, blectf_flag_secret(1));
+        case UUID_F3_DESC:
+            /* the flag lives in this characteristic's 0x2901 descriptor */
+            return append_str(ctxt, "look at my description, not my value");
         case UUID_F2_READ:
             return append_str(ctxt, blectf_flag_secret(2));
         case UUID_F5_HEX:
@@ -265,28 +268,29 @@ void blectf_notify_score(uint16_t conn_handle)
     }
 }
 
-void blectf_on_subscribe(uint16_t conn_handle, uint16_t attr_handle, int cur_notify)
+void blectf_on_subscribe(uint16_t conn_handle, uint16_t attr_handle,
+                         int cur_notify, int cur_indicate)
 {
-    if (!cur_notify) {
-        return;
+    if (!cur_notify && !cur_indicate) {
+        return;   /* unsubscribe, or a subscribe we do not act on */
     }
 
     /* flag 10: one notification with the whole flag */
-    if (attr_handle == g_f10_handle) {
+    if (cur_notify && attr_handle == g_f10_handle) {
         const char *s = blectf_flag_secret(10);
         struct os_mbuf *om = ble_hs_mbuf_from_flat(s, strlen(s));
         if (om) ble_gatts_notify_custom(conn_handle, g_f10_handle, om);
     }
 
-    /* flag 11: an indication (needs an ACK from the client) */
-    if (attr_handle == g_f11_handle) {
+    /* flag 11: an indication (client subscribed for indications, needs an ACK) */
+    if (cur_indicate && attr_handle == g_f11_handle) {
         const char *s = blectf_flag_secret(11);
         struct os_mbuf *om = ble_hs_mbuf_from_flat(s, strlen(s));
         if (om) ble_gatts_indicate_custom(conn_handle, g_f11_handle, om);
     }
 
     /* flag 12: split the flag into three notifications; reassemble client-side */
-    if (attr_handle == g_f12_handle) {
+    if (cur_notify && attr_handle == g_f12_handle) {
         const char *s = blectf_flag_secret(12);
         size_t len = strlen(s), off = 0;
         size_t chunk = (len + 2) / 3;

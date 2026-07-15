@@ -87,7 +87,8 @@ static int blectf_gap_event(struct ble_gap_event *event, void *arg)
     case BLE_GAP_EVENT_SUBSCRIBE:
         blectf_on_subscribe(event->subscribe.conn_handle,
                             event->subscribe.attr_handle,
-                            event->subscribe.cur_notify);
+                            event->subscribe.cur_notify,
+                            event->subscribe.cur_indicate);
         break;
 
     default:

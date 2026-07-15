@@ -19,7 +19,8 @@
 
 /* GATT server (gatt_svc.c) */
 int  blectf_gatt_init(void);
-void blectf_on_subscribe(uint16_t conn_handle, uint16_t attr_handle, int cur_notify);
+void blectf_on_subscribe(uint16_t conn_handle, uint16_t attr_handle,
+                         int cur_notify, int cur_indicate);
 void blectf_notify_score(uint16_t conn_handle);
 
 /* Advertising payloads (flags.c) */
