@@ -5,10 +5,9 @@ flag exercised on hardware, **without BLEtterCap**, using only standard Linux BL
 tooling (`bleak` over a BlueZ adapter). Each flag lists the method, the exact
 operation, and the observed result, verified against the on-device scoreboard.
 
-**Result: 14/15 flags captured automatically this run** (device score reached
-14/15 in real time), plus the flag 21 encryption gate verified. Flag 21's
-encrypted read needs a pairing-capable central; see the security note - it is a
-test-hardware limitation, not a firmware one.
+**Result: 15/15 flags captured in a single automated run** (device scoreboard
+climbed `0 -> 15/15` in real time), from a freshly erased board, using only
+`bleak` and a BlueZ pairing agent. No BLEtterCap involved.
 
 If you just want to learn the mechanics, read the per-tier walkthroughs first.
 This page proves they actually work on hardware.
@@ -19,7 +18,7 @@ This page proves they actually work on hardware.
 |-------|--------|
 | Target | ESP32-C6, firmware `bletterctf` (ESP-IDF v5.2.1 + NimBLE), BLE MAC `14:C1:9F:E5:A6:5A`, advertises `BLEtterCTF` |
 | Central (solver) | Linux host, BlueZ adapter `hci0`, Python `bleak` |
-| Security tier radio | WHAD ButteRFly (nRF52840) for the pairing flag |
+| Pairing (flag 21) | same `hci0` adapter + a `NoInputNoOutput` BlueZ agent (registered via D-Bus by the solver) |
 | BLEtterCap | **not used** - every flag solved with standard tools |
 | Scoreboard | characteristic `0xFF01` (read + notify), `flags captured N/15` |
 
@@ -71,11 +70,11 @@ below is the real observed capture and the resulting device score:
 | 15 | T2 | parse manufacturer data in the advertisement | `advf1337` | 12/15 |
 | 16 | T2 | active scan, parse the scan response | `flag{active_scanning_ftw}` | 13/15 |
 | 36 | T6 | full read (Read Blob) of `0xFF14` | `flag{read_blobs_are_a_thing_yeah}` | 14/15 |
-| 21 | T3 | pair, then read encrypted `0xFF13` | gate verified; encrypted read needs a pairing-capable central | 14 -> 15* |
+| 21 | T3 | Just Works pairing, then read encrypted `0xFF13` | `flag{encryption_is_a_feature}` | 15/15 |
 
-The score climbed 1 -> 14 in real time over the `hci0` connection, confirming
-every non-security flag is solvable with nothing but a laptop and `bleak`.
-`*` flag 21 reaches 15/15 on any central that can pair (see below).
+The scoreboard climbed `1 -> 15` in real time over the `hci0` connection,
+confirming the whole CTF is solvable with nothing but a laptop and `bleak`
+(plus a BlueZ agent for the one pairing flag).
 
 ## Flag 21 - the security tier
 
@@ -85,32 +84,26 @@ and encrypted. Two facts were verified:
 1. **The gate works.** Reading `0xFF13` on an unpaired link is rejected by the
    peripheral (insufficient authentication/encryption). The flag is genuinely
    protected, not just hidden.
-2. **After pairing, the flag reads out** and submits to reach `15/15`.
+2. **After pairing, the flag reads out.** Observed value:
+   `flag{encryption_is_a_feature}`, taking the scoreboard to `15/15`.
 
-**On the bench:** fact (1) was confirmed - an unpaired read of `0xFF13` is
-rejected by the peripheral. Fact (2) could not be completed because **neither
-radio on the test host can act as a pairing-capable central**:
+**The Linux gotcha that matters:** on BlueZ, `client.pair()` (or an encrypted
+read) fails with `org.bluez.Error.AuthenticationFailed` **unless a pairing agent
+is registered**. Just Works pairing still needs *something* to authorize it. Once
+the solver registers a `NoInputNoOutput` agent over D-Bus, the same `hci0` adapter
+pairs and reads `0xFF13` cleanly. This is not a firmware issue and not a dongle
+issue - it is BlueZ requiring an agent.
 
-- The USB BlueZ adapter is a counterfeit CSR8510 that returns
-  `org.bluez.Error.AuthenticationFailed` for LE SMP (both LESC and legacy) - it
-  does GATT fine (it solved the other 14 flags) but cannot pair.
-- The WHAD ButteRFly reliably **sniffs** the target (its advertisement was
-  confirmed present in 10/10 attempts) but its WHAD *central* could not initiate
-  a connection in this environment (`PeripheralNotFound` on every attempt).
+`tools/solver-examples/solve_bleak.py` now registers this agent automatically
+(best-effort, Linux only; macOS/Windows pair natively), so a single run captures
+all 15 including the security flag.
 
-Pairing is a **central-side** capability, so this is a limitation of the test
-central hardware, not of the BLEtterCTF firmware, which correctly enforces the
-encryption gate. The board itself was verified advertising and healthy at 14/15
-throughout.
+Equivalent manual routes:
 
-To take the score to a clean **15/15**, use a central that can actually pair:
-
-- **Phone + nRF Connect (easiest):** connect, tap read on `0xFF13`, accept the
-  pairing prompt, read the flag, write it to `0xFF02`.
-- **A genuine BT4.2+ USB adapter** with `bluetoothctl`: `pair`, then read `0xFF13`.
-
-The reference tester attempts this automatically via `client.pair()`; on a
-pairing-capable adapter it captures flag 21 and prints `15/15`.
+- **Phone + nRF Connect:** connect, tap read on `0xFF13`, accept the pairing
+  prompt, read the flag, write it to `0xFF02`.
+- **`bluetoothctl`:** register an agent (`agent NoInputNoOutput` / `default-agent`)
+  in a live session, then `pair` and read `0xFF13`.
 
 ## Reproduce it yourself
 

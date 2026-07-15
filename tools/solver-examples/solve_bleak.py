@@ -108,7 +108,53 @@ async def try_flag(fid, coro):
         record(fid, False, f"error: {e}")
 
 
+async def register_bluez_agent():
+    """Best-effort: register a NoInputNoOutput BlueZ agent so Just Works pairing
+    (flag 21) auto-completes on Linux. Without a registered agent, BlueZ rejects
+    the pairing with 'AuthenticationFailed'. No-op / harmless on macOS/Windows,
+    where the OS handles pairing natively.
+    """
+    try:
+        from dbus_fast.aio import MessageBus
+        from dbus_fast.service import ServiceInterface, method
+        from dbus_fast import BusType
+    except Exception:
+        return None  # not a dbus/BlueZ platform
+
+    class _Agent(ServiceInterface):
+        def __init__(self):
+            super().__init__("org.bluez.Agent1")
+        @method()
+        def Release(self): pass
+        @method()
+        def RequestConfirmation(self, device: 'o', passkey: 'u'): pass
+        @method()
+        def RequestAuthorization(self, device: 'o'): pass
+        @method()
+        def AuthorizeService(self, device: 'o', uuid: 's'): pass
+        @method()
+        def RequestPasskey(self, device: 'o') -> 'u': return 0
+        @method()
+        def RequestPinCode(self, device: 'o') -> 's': return "0000"
+        @method()
+        def Cancel(self): pass
+
+    try:
+        bus = await MessageBus(bus_type=BusType.SYSTEM).connect()
+        bus.export("/blectf/agent", _Agent())
+        intro = await bus.introspect("org.bluez", "/org/bluez")
+        am = bus.get_proxy_object("org.bluez", "/org/bluez", intro) \
+                .get_interface("org.bluez.AgentManager1")
+        await am.call_register_agent("/blectf/agent", "NoInputNoOutput")
+        await am.call_request_default_agent("/blectf/agent")
+        print("  (BlueZ Just Works agent registered)")
+        return bus  # keep alive for the process lifetime
+    except Exception:
+        return None
+
+
 async def main():
+    _agent_bus = await register_bluez_agent()   # enables flag 21 pairing on Linux
     print(f"scanning (active) for {DEVICE_NAME} ...")
     device = None
     adv_flag15 = adv_flag16 = None
