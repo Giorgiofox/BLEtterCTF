@@ -72,12 +72,24 @@ The lesson: there is more to BLE than GATT.
   connections. A client that blindly trusts a cached database misses the new flag;
   you must re-discover (or honour **Service Changed** / the database hash). Host
   solvable, but sneaky.
-- **Flag 35 - break it gently (safe fuzzing):** a characteristic reveals the flag
-  only on a malformed or edge-length write (e.g. an empty write, or one longer
-  than expected). Teaches input-validation testing without breaking anything.
-- **Flag 36 - too big for one bite (long read):** the value is longer than one
-  MTU, so a naive read truncates it. Do a full read (**Read Blob**) to get it all.
-  *(This one is host-solvable and already implemented; see the catalog.)*
+- **Flag 35 - break it gently (safe fuzzing):** *(implemented, host-solvable.)*
+  `0xFF19` hands over the flag only on an **edge-case write** - here, an *empty*
+  (zero-length) write. Well-behaved clients never send that, which is exactly why
+  it is a good probe. The lesson: unexpected inputs (empty, oversized, malformed)
+  find bugs; testing them safely on your own device is how you learn to. Do it:
+  ```python
+  await client.write_gatt_char(u(0xFF19), b"", response=True)  # empty write
+  flag = await client.read_gatt_char(u(0xFF19))                # now revealed
+  ```
+- **Flag 36 - too big for one bite (long read):** *(implemented, host-solvable.)*
+  `0xFF14`'s value is longer than one **MTU** (the ~20-byte packet limit from
+  Tier 1). A naive read that grabs only the first packet truncates the flag; a
+  full read transparently issues **Read Blob** requests to fetch the rest. Most
+  libraries (`bleak` included) do the full read for you:
+  ```python
+  flag = await client.read_gatt_char(u(0xFF14))   # bleak fetches all chunks
+  ```
+  The lesson: if a value looks cut off, you truncated it - read the whole thing.
 - **Flag 37 - the capstone:** chain several skills - sniff something, pair, and
   reassemble a notification - into one final flag. The graduation exam.
 - **Flag 38 - look outside (OSINT):** the answer is not on the device. Recon
