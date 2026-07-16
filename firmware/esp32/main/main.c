@@ -28,12 +28,14 @@ static void blectf_advertise(void)
     struct ble_gap_adv_params adv_params;
     int rc;
 
-    /* ADV PDU: device name + flag 15 in the manufacturer-specific data */
+    /* ADV PDU: SHORTENED name + flag 15 in the manufacturer-specific data.
+     * The name is marked shortened on purpose (flag 4): the full Device Name,
+     * which carries flag 4, lives in the GAP characteristic 0x2A00. */
     memset(&fields, 0, sizeof fields);
     fields.flags = BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP;
     fields.name = (uint8_t *)BLECTF_DEVICE_NAME;
     fields.name_len = strlen(BLECTF_DEVICE_NAME);
-    fields.name_is_complete = 1;
+    fields.name_is_complete = 0;   /* Shortened Local Name */
     fields.mfg_data = blectf_mfg_data();
     fields.mfg_data_len = blectf_mfg_data_len();
 
@@ -43,10 +45,13 @@ static void blectf_advertise(void)
         return;
     }
 
-    /* SCAN RESPONSE PDU: flag 16, only handed out on an active scan */
+    /* SCAN RESPONSE PDU: flag 16 (manufacturer data) + flag 17 (service data),
+     * both only handed out on an active scan. */
     memset(&rsp_fields, 0, sizeof rsp_fields);
     rsp_fields.mfg_data = blectf_scanrsp_data();
     rsp_fields.mfg_data_len = blectf_scanrsp_data_len();
+    rsp_fields.svc_data_uuid16 = blectf_svc_data();
+    rsp_fields.svc_data_uuid16_len = blectf_svc_data_len();
     rc = ble_gap_adv_rsp_set_fields(&rsp_fields);
     if (rc != 0) {
         ESP_LOGE(TAG, "adv_rsp_set_fields rc=%d", rc);
@@ -155,6 +160,9 @@ void app_main(void)
     rc = blectf_gatt_init();
     assert(rc == 0);
 
+    /* GAP device name stays the short "BLEtterCTF" (BlueZ hides the GAP service
+     * from apps anyway). Flag 4's full name is served from characteristic
+     * 0xFF1A instead, so any GATT client can read it. */
     rc = ble_svc_gap_device_name_set(BLECTF_DEVICE_NAME);
     assert(rc == 0);
 

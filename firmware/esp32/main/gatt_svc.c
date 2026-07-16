@@ -34,6 +34,10 @@ static const char *TAG = "blectf.gatt";
 #define UUID_F12_MULTI    0xFF0F  /* NOTIFY      : flag 12, chunked               */
 #define UUID_F21_ENC      0xFF13  /* READ (enc)  : flag 21, needs pairing         */
 #define UUID_F36_LONG     0xFF14  /* READ        : flag 36, longer than one MTU   */
+#define UUID_F13_TRIG     0xFF15  /* WRITE|NOTIFY: flag 13, write to trigger      */
+#define UUID_F24_BOND     0xFF17  /* READ (enc)  : flag 24, bonding persistence   */
+#define UUID_F35_FUZZ     0xFF19  /* READ|WRITE  : flag 35, reveals on edge write */
+#define UUID_F4_NAME      0xFF1A  /* READ        : flag 4, full device name       */
 
 #define UNLOCK_KEY "d34dbeef"
 
@@ -41,9 +45,11 @@ static uint16_t g_score_handle;
 static uint16_t g_f10_handle;
 static uint16_t g_f11_handle;
 static uint16_t g_f12_handle;
+static uint16_t g_f13_handle;
 
 static bool g_write_unlocked;   /* flag 8  */
 static int  g_seq_state;        /* flag 9: 0 -> 1 -> 2 -> 3(unlocked) */
+static bool g_fuzz_unlocked;    /* flag 35 */
 
 static int gatt_access(uint16_t conn_handle, uint16_t attr_handle,
                        struct ble_gatt_access_ctxt *ctxt, void *arg);
@@ -91,6 +97,15 @@ static const struct ble_gatt_svc_def gatt_svcs[] = {
             { .uuid = BLE_UUID16_DECLARE(UUID_F21_ENC), .access_cb = gatt_access,
               .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_READ_ENC },
             { .uuid = BLE_UUID16_DECLARE(UUID_F36_LONG), .access_cb = gatt_access,
+              .flags = BLE_GATT_CHR_F_READ },
+            { .uuid = BLE_UUID16_DECLARE(UUID_F13_TRIG), .access_cb = gatt_access,
+              .flags = BLE_GATT_CHR_F_WRITE | BLE_GATT_CHR_F_NOTIFY,
+              .val_handle = &g_f13_handle },
+            { .uuid = BLE_UUID16_DECLARE(UUID_F24_BOND), .access_cb = gatt_access,
+              .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_READ_ENC },
+            { .uuid = BLE_UUID16_DECLARE(UUID_F35_FUZZ), .access_cb = gatt_access,
+              .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_WRITE },
+            { .uuid = BLE_UUID16_DECLARE(UUID_F4_NAME), .access_cb = gatt_access,
               .flags = BLE_GATT_CHR_F_READ },
             { 0 }
         },
@@ -215,8 +230,16 @@ static int gatt_access(uint16_t conn_handle, uint16_t attr_handle,
                                     : "write 1, 2, 3 in order");
         case UUID_F21_ENC:
             return append_str(ctxt, blectf_flag_secret(21));
+        case UUID_F24_BOND:
+            return append_str(ctxt, blectf_flag_secret(24));
+        case UUID_F4_NAME:
+            return append_str(ctxt, blectf_full_device_name());
         case UUID_F36_LONG:
             return append_str(ctxt, blectf_flag_secret(36));
+        case UUID_F35_FUZZ:
+            return append_str(ctxt, g_fuzz_unlocked
+                                    ? blectf_flag_secret(35)
+                                    : "surprise me with a weird write");
         }
         return BLE_ATT_ERR_UNLIKELY;
 
@@ -248,6 +271,19 @@ static int gatt_access(uint16_t conn_handle, uint16_t attr_handle,
             else if (strcmp(buf, "2") == 0 && g_seq_state == 1) g_seq_state = 2;
             else if (strcmp(buf, "3") == 0 && g_seq_state == 2) g_seq_state = 3;
             else if (g_seq_state < 3)                           g_seq_state = 0;
+            return 0;
+        case UUID_F13_TRIG: {
+            /* flag 13: the write is the trigger; the flag arrives as a notify */
+            const char *s = blectf_flag_secret(13);
+            struct os_mbuf *om = ble_hs_mbuf_from_flat(s, strlen(s));
+            if (om) ble_gatts_notify_custom(conn_handle, g_f13_handle, om);
+            return 0;
+        }
+        case UUID_F35_FUZZ:
+            /* flag 35: an empty (zero-length) write is the edge case that unlocks */
+            if (len == 0) {
+                g_fuzz_unlocked = true;
+            }
             return 0;
         }
         return BLE_ATT_ERR_UNLIKELY;

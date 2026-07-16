@@ -5,9 +5,10 @@ flag exercised on hardware, **without BLEtterCap**, using only standard Linux BL
 tooling (`bleak` over a BlueZ adapter). Each flag lists the method, the exact
 operation, and the observed result, verified against the on-device scoreboard.
 
-**Result: 15/15 flags captured in a single automated run** (device scoreboard
-climbed `0 -> 15/15` in real time), from a freshly erased board, using only
-`bleak` and a BlueZ pairing agent. No BLEtterCap involved.
+**Result: 20/20 implemented flags captured in a single automated run** (device
+scoreboard climbed `0 -> 20/20` in real time), from a freshly erased board, using
+only `bleak` and a BlueZ pairing agent. No BLEtterCap involved. (The full catalog
+is 38 flags; the remaining 18 are advanced tiers - see the [Flag Catalog](Flag-Catalog).)
 
 If you just want to learn the mechanics, read the per-tier walkthroughs first.
 This page proves they actually work on hardware.
@@ -20,7 +21,7 @@ This page proves they actually work on hardware.
 | Central (solver) | Linux host, BlueZ adapter `hci0`, Python `bleak` |
 | Pairing (flag 21) | same `hci0` adapter + a `NoInputNoOutput` BlueZ agent (registered via D-Bus by the solver) |
 | BLEtterCap | **not used** - every flag solved with standard tools |
-| Scoreboard | characteristic `0xFF01` (read + notify), `flags captured N/15` |
+| Scoreboard | characteristic `0xFF01` (read + notify), `flags captured N/20` |
 
 Firmware built and flashed with:
 
@@ -28,7 +29,7 @@ Firmware built and flashed with:
 idf.py set-target esp32c6
 idf.py build
 idf.py -p /dev/ttyACM2 flash        # serial-bound to the target board only
-# -> "BLEtterCTF up: 15 flags implemented"
+# -> "BLEtterCTF up: 20 flags implemented"
 ```
 
 ## Verification method (important)
@@ -42,13 +43,14 @@ on every new capture, which is the reliable signal. The reference tester
 
 ## Results
 
-Scan (active) found the target and, before any connection, already leaked two
-flags in the advertising data:
+Scan (active) found the target and, before any connection, already leaked three
+flags in the advertising data (advertising is public - that is the lesson):
 
 ```
-target: 14:C1:9F:E5:A6:5A  name=BLEtterCTF
-  mfg 0xFFFF = 61 64 76 66 31 33 33 37            -> "advf1337"                 (flag 15)
-  mfg 0xFFFE = 66 6c 61 67 7b ... 7d (scan resp)  -> "flag{active_scanning_ftw}" (flag 16)
+target: 14:C1:9F:E5:A6:5A  name=BLEtterCTF   (advertised name is Shortened)
+  ADV  mfg 0xFFFF          -> "advf1337"   (flag 15)
+  RSP  mfg 0xFFFE          -> "scan1337"   (flag 16, active scan only)
+  RSP  service data 0xFF00 -> "svc1337"    (flag 17, active scan only)
 ```
 
 Then, connected over `hci0` with `bleak`, walking one flag at a time. Every line
@@ -56,25 +58,30 @@ below is the real observed capture and the resulting device score:
 
 | # | Tier | Method | Result | Score |
 |---|------|--------|--------|:-----:|
-| 1 | T0 | read `0xFF03` | `flag{welcome_you_absolute_legend}` | 1/15 |
-| 2 | T0 | read `0xFF07` | `flag{plain_and_simple}` | 2/15 |
-| 3 | T0 | read the `0x2901` descriptor of `0xFF04` | `flag{descriptors_are_not_decor}` | 3/15 |
-| 5 | T0 | read `0xFF08`, hex-decode | `flag{hex_is_just_base16}` | 4/15 |
-| 6 | T0 | read `0xFF09`, base64-decode | `flag{base64_is_not_encryption}` | 5/15 |
-| 7 | T0 | read `0xFF0A`+`0xFF0B`+`0xFF0C`, concatenate | `flag{teamwork_dream_work}` | 6/15 |
-| 8 | T0 | write `d34dbeef` to `0xFF05`, read it back | `flag{write_then_read_classic}` | 7/15 |
-| 9 | T0 | write `1`,`2`,`3` in order to `0xFF0D`, read | `flag{state_machines_hold_grudges}` | 8/15 |
-| 10 | T1 | subscribe `0xFF06` (notify) | `flag{notifications_never_sleep}` | 9/15 |
-| 11 | T1 | subscribe `0xFF0E` (indicate) | `flag{indicate_wants_an_ack}` | 10/15 |
-| 12 | T1 | subscribe `0xFF0F`, reassemble chunks | `flag{reassembly_required}` | 11/15 |
-| 15 | T2 | parse manufacturer data in the advertisement | `advf1337` | 12/15 |
-| 16 | T2 | active scan, parse the scan response | `flag{active_scanning_ftw}` | 13/15 |
-| 36 | T6 | full read (Read Blob) of `0xFF14` | `flag{read_blobs_are_a_thing_yeah}` | 14/15 |
-| 21 | T3 | Just Works pairing, then read encrypted `0xFF13` | `flag{encryption_is_a_feature}` | 15/15 |
+| 1 | T0 | read `0xFF03` | `flag{welcome_you_absolute_legend}` | 1/20 |
+| 2 | T0 | read `0xFF07` | `flag{plain_and_simple}` | 2/20 |
+| 3 | T0 | read the `0x2901` descriptor of `0xFF04` | `flag{descriptors_are_not_decor}` | 3/20 |
+| 4 | T0 | read the full device name at `0xFF1A` | `flag{names_can_be_longer}` | 4/20 |
+| 5 | T0 | read `0xFF08`, hex-decode | `flag{hex_is_just_base16}` | 5/20 |
+| 6 | T0 | read `0xFF09`, base64-decode | `flag{base64_is_not_encryption}` | 6/20 |
+| 7 | T0 | read `0xFF0A`+`0xFF0B`+`0xFF0C`, concatenate | `flag{teamwork_dream_work}` | 7/20 |
+| 8 | T0 | write `d34dbeef` to `0xFF05`, read it back | `flag{write_then_read_classic}` | 8/20 |
+| 9 | T0 | write `1`,`2`,`3` in order to `0xFF0D`, read | `flag{state_machines_hold_grudges}` | 9/20 |
+| 10 | T1 | subscribe `0xFF06` (notify) | `flag{notifications_never_sleep}` | 10/20 |
+| 11 | T1 | subscribe `0xFF0E` (indicate) | `flag{indicate_wants_an_ack}` | 11/20 |
+| 12 | T1 | subscribe `0xFF0F`, reassemble chunks | `flag{reassembly_required}` | 12/20 |
+| 13 | T1 | subscribe `0xFF15`, then write to trigger the notify | `flag{write_then_it_talks}` | 13/20 |
+| 15 | T2 | manufacturer data in the advertisement | `advf1337` | 14/20 |
+| 16 | T2 | active scan, scan-response manufacturer data | `scan1337` | 15/20 |
+| 17 | T2 | active scan, scan-response service data (0xFF00) | `svc1337` | 16/20 |
+| 21 | T3 | Just Works pairing, then read encrypted `0xFF13` | `flag{encryption_is_a_feature}` | 17/20 |
+| 24 | T3 | read encrypted `0xFF17` over the bonded link | `flag{bonds_outlive_connections}` | 18/20 |
+| 35 | T6 | empty (zero-length) write to `0xFF19`, then read | `flag{empty_writes_are_edge_cases}` | 19/20 |
+| 36 | T6 | full read (Read Blob) of `0xFF14` | `flag{read_blobs_are_a_thing_yeah}` | 20/20 |
 
-The scoreboard climbed `1 -> 15` in real time over the `hci0` connection,
-confirming the whole CTF is solvable with nothing but a laptop and `bleak`
-(plus a BlueZ agent for the one pairing flag).
+The scoreboard climbed `1 -> 20` in real time over the `hci0` connection,
+confirming the whole implemented CTF is solvable with nothing but a laptop and
+`bleak` (plus a BlueZ agent for the pairing flags).
 
 ## Flag 21 - the security tier
 

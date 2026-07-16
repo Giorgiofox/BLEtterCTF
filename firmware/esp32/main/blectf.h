@@ -28,6 +28,9 @@ uint8_t *blectf_mfg_data(void);       /* T2 flag 15: manufacturer data in ADV   
 uint8_t  blectf_mfg_data_len(void);
 uint8_t *blectf_scanrsp_data(void);   /* T2 flag 16: manufacturer data in SCAN RSP */
 uint8_t  blectf_scanrsp_data_len(void);
+uint8_t *blectf_svc_data(void);       /* T2 flag 17: service data in SCAN RSP      */
+uint8_t  blectf_svc_data_len(void);
+const char *blectf_full_device_name(void); /* T2 flag 4: full GAP name (0x2A00)    */
 
 /* Scoreboard and flag registry (flags.c) */
 int         blectf_flag_count(void);            /* flags currently implemented */

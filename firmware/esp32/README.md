@@ -48,9 +48,13 @@ main/
 | 0xFF0F | NOTIFY | T1 flag 12: chunked, reassemble |
 | 0xFF13 | READ (enc) | T3 flag 21: pair (Just Works) to read |
 | 0xFF14 | READ | T6 flag 36: longer than one MTU (read blob) |
+| 0xFF15 | WRITE, NOTIFY | T1 flag 13: write to trigger the notification |
+| 0xFF17 | READ (enc) | T3 flag 24: bonding persistence (reconnect, no re-pair) |
+| 0xFF19 | READ, WRITE | T6 flag 35: reveals on an empty (edge-case) write |
+| 0xFF1A | READ | T0 flag 4: full device name (advertised name is Shortened) |
 
-Flag 15 rides in the advertising manufacturer-specific data; flag 16 in the scan
-response (active scan only).
+Advertising: flag 15 = manufacturer data in the ADV; flag 16 = manufacturer data
+in the scan response; flag 17 = service data (UUID 0xFF00) in the scan response.
 
 ## Adding flags
 

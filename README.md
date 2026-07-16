@@ -4,7 +4,7 @@ A hands-on Bluetooth Low Energy Capture-The-Flag, built to actually teach BLE an
 its characteristics. It is a modern successor to
 [hackgnar/ble_ctf](https://github.com/hackgnar/ble_ctf): same "flash an ESP32 and
 attack it" idea, but with a tiered curriculum, real feedback, and tight
-integration with the [BLEtterCap](../) analyzer so you learn by *seeing* the
+integration with the [BLEtterCap](https://github.com/Giorgiofox/BLEttercap) analyzer so you learn by *seeing* the
 packets, not by memorizing handles.
 
 ## Why another BLE CTF

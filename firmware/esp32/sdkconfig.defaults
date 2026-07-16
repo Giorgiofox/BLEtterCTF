@@ -19,6 +19,9 @@ CONFIG_BT_NIMBLE_NVS_PERSIST=y
 CONFIG_PARTITION_TABLE_CUSTOM=y
 CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
 
+# --- GAP: allow a longer Device Name (flag 4 lives in the full 0x2A00 name) ---
+CONFIG_BT_NIMBLE_GAP_DEVICE_NAME_MAX_LEN=64
+
 # --- Logging -----------------------------------------------------------------
 CONFIG_LOG_DEFAULT_LEVEL_INFO=y
 
